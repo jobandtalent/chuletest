@@ -1,0 +1,216 @@
+---
+title: 'How to test components based on react-router'
+excerpt: "An important part of a frontend project is the client routing system. We use react-router to manage it, and it's important to know to deal with react-router at testing level."
+date: '2021-04-26'
+---
+
+An important part of a modern frontend application is the client routing. We use `react-router` to handle it, and it's great, but it adds some complexity when we want to tests components that depends on a `<Router>` component. But harder it's not impossible, in fact, with a minimal setup, testing client routing is pretty easy.
+
+Let's jumping into code. Let's assume we have this dummy application code, for simplicty, let's put all code in one "file", but remember kids, don't this at home:
+
+```
+import React from "react";
+import {
+  BrowserRouter as Router,
+  useParams,
+  Switch,
+  Route,
+  Link,
+  Redirect
+} from "react-router-dom";
+
+const Home = () => {
+  return (
+    <div data-testid="home">
+      <ul>
+        <li>
+          <Link to="/23">Detail 23</Link>
+        </li>
+        <li>
+          <Link to="/24">Detail 24</Link>
+        </li>
+        <li>
+          <Link to="/25">Detail 25</Link>
+        </li>
+        <li>
+          <Link to="/wadus">Detail totally wrong</Link>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export const Detail = () => {
+  const { node } = useParams();
+  console.log(node);
+
+  const allowedIds = ["23", "24", "25"];
+
+  if (!allowedIds.includes(node)) {
+    return <Redirect to="/not-found" />;
+  }
+
+  return (
+    <div data-testid="detail">
+      <div>Detail ID: {node}</div>
+      <Link to="/">Back</Link>
+    </div>
+  );
+};
+
+export const Container = () => {
+  return (
+    <Switch>
+      <Route exact path="/">
+        <Home />
+      </Route>
+      <Route exact path="/not-found">
+        <div>404</div>
+      </Route>
+      <Route path="/:node">
+        <Detail />
+      </Route>
+    </Switch>
+  );
+};
+
+export default function App() {
+  return (
+    <div data-testid="App" className="App">
+      <Router>
+        <Container />
+      </Router>
+    </div>
+  );
+}
+```
+
+Awesome, let's start adding some tests:
+
+```
+import { render, screen } from '@testing-library/react';
+import App, {Container} from './App';
+
+describe('App', () => {
+  test('renders properly', () => {
+    render(<App />);
+    expect(screen.getByTestId('App')).toBeInTheDocument();
+  });
+})
+
+describe('Container', () => {
+  test('renders properly', () => {
+    render(<Container />);
+  });
+})
+```
+
+If you run your test task in the console, you will see that the first test passes but we get an error for the second test:
+
+```
+Error: Invariant failed: You should not use <Switch> outside a <Router>
+```
+
+It makes sense, the error is pretty clear, we should add a Router before testing our `Container` component in isolation. So let's create an utility to use it in these kind of scenarios that lets us to define the current route rendered:
+
+```
+import React from "react";
+import { createMemoryHistory } from "history";
+import { Router } from "react-router-dom";
+import { render } from "@testing-library/react";
+
+export const renderWithRouter = (
+  ui,
+  {
+    route = "/",
+    history = createMemoryHistory({ initialEntries: [route] })
+  } = {}
+) => ({
+  ...render(<Router history={history}>{ui}</Router>),
+  history
+});
+```
+
+This utility is just basically a HOC, that wraps the UI passed as prop inside a memory Router. The HOC also allows an initial route prop that it's very handy to render the initial state. The HOC returns the `history` and all the selectors returned initially by `@testing-library`.
+
+If now we update our tests to use the `renderWithRouter` utility to render the `Container` component, we see that now all it's green. Even we have no asserts in the second test, there is no error either, so we can see it's working properly.
+
+Now we can test more insteresting things like redirections, current route and so on:
+
+```
+import { render, screen, waitFor } from '@testing-library/react';
+import {renderWithRouter} from './utils'
+import App, {Container} from './App';
+
+describe('App', () => {
+  test('renders properly', () => {
+    render(<App />);
+    expect(screen.getByTestId('App')).toBeInTheDocument();
+  });
+})
+
+describe('Container', () => {
+  test('renders home properly', () => {
+    const {history} = renderWithRouter(<Container />);
+
+    expect(screen.getByTestId('Home')).toBeInTheDocument();
+    expect(history.location.pathname).toBe('/');
+  });
+
+  test('renders detail properly', () => {
+    const {history} = renderWithRouter(<Container />, {route: '/23'});
+
+    expect(screen.getByTestId('Detail')).toBeInTheDocument();
+    expect(history.location.pathname).toBe('/23');
+  });
+
+  test('renders 404 properly', async () => {
+    const {history} = renderWithRouter(<Container />, {route: '/44'});
+
+    expect(screen.queryByTestId('Detail')).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/not-found');
+    })
+  });
+})
+```
+
+We should do the same for the `Detail` components to test it in isolation, but it should be pretty much the same.
+
+Sometimes we can augment the HOC to include the redux store as well. In this case we will include the `Provider` and the redux store as well:
+
+```
+import React from 'react';
+import { createStore, applyMiddleware, compose, combineReducers } from 'redux';
+import thunk from 'redux-thunk';
+import { Provider } from 'react-redux';
+import { createMemoryHistory } from 'history';
+import { Router } from 'react-router-dom';
+import { render } from '@testing-library/react';
+
+export const renderWithRouter = (reducers, initialState = {}) => {
+  return (
+    ui,
+    { route = '/', history = createMemoryHistory({ initialEntries: [route] }), reducers, initialState={} } = {}
+  ) => {
+    const { csrfToken = 'wadus', ...rest } = initialState;
+  const store = createStore(
+    combineReducers({ ...reducers, csrfToken: () => csrfToken }),
+    rest,
+    compose(applyMiddleware(thunk))
+  );
+
+    return {
+    ...render(
+      <Provider store={store}>
+        <Router history={history}>{ui}</Router>
+      </Provider>
+    ),
+    history
+  }
+  });
+};
+```
+
+And that's all, happy testing.
