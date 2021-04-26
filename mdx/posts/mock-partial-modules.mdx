@@ -1,0 +1,32 @@
+---
+title: Mock partial real modules
+excerpt: Most of the time we mock full modules, but what if we want to mock only one function in the module?
+date: '2021-04-21'
+---
+
+Not long ago, I found an interesting use case with Jest mock, and would like to share with you.
+
+So most of the time when we use a third party in the code, we can just mock the whole module. But there are times when we need to use parts of the real implementation of the module, this is when `jest.requireActual` comes handy.
+
+So what does it do? When mocking a library you may only want to mock a specific function of the library and keep the rest of the library intact.
+
+```
+jest.mock("lodash", () => ({
+  ...jest.requireActual("lodash"),
+  set: jest.fn()
+}));
+```
+
+So in the code above we create a new mock object, using `jest.requireActual` to spread all the functions of the library and only mock `set` in this case.
+
+This is helpful to test context for instance, you could do:
+
+```
+jest.mock("react", () => ({
+  ...jest.requireActual("react"),
+  useContext: jest.fn().mockReturnedValue({...})
+}));
+```
+
+
+

@@ -1,0 +1,26 @@
+.container {
+  margin: 128px 0 0;
+  max-width: 48rem;
+}
+
+.container p {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.container p + p {
+  margin-top: 16px;
+}
+
+.title {
+  max-width: 32rem;
+  font-size: 48px;
+  line-height: 56px;
+  font-weight: 900;
+  margin-bottom: 24px;
+}
+
+.title i {
+  color: #1c97f5;
+  font-style: normal;
+}

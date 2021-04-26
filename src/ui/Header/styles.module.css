@@ -1,0 +1,41 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  z-index: 10;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.home,
+.github {
+  display: block;
+  padding: 8px;
+  color: #000;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  background-color: transparent;
+  transition-property: background-color;
+  transition-timing-function: ease-out;
+  transition-duration: .2s;
+  border-radius: 2px;
+}
+
+.home:hover {
+  color: #1c97f5;
+  background-color: #fff;
+}
+
+.github:hover {
+  color: #fff;
+  background-color: #1c97f5;
+}

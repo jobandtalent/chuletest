@@ -1,0 +1,10 @@
+.container {
+  display: inline-block;
+  border-radius: 2px;
+  background-color: #E55353;
+  color: white;
+  font-size: 8px;
+  line-height: normal;
+  text-transform: uppercase;
+  padding: 4px;
+}

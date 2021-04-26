@@ -1,0 +1,27 @@
+.container {
+  margin-bottom: 48px;
+}
+
+.title {
+  position: relative;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.title a:hover {
+  color: #1c97f5;
+  text-decoration: underline;
+}
+
+.content {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.draft {
+  display: inline-block;
+  transform: translateY(-4px);
+  margin-left: 16px;
+}

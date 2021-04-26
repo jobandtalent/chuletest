@@ -1,0 +1,14 @@
+.container {
+  font-weight: 400;
+  padding: 48px;
+  text-align: center;
+}
+
+.container a {
+  font-weight: 600;
+  color: #1c97f5;
+}
+.icon {
+  font-style: normal;
+  padding: 0 4px 0 2px; 
+}
