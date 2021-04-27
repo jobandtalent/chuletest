@@ -13,7 +13,7 @@ const Header = (props) => {
         </Link>
       </h1>
 
-      <a className={styles.github} href="https://github.com">Github</a>
+      <a className={styles.github} href="https://github.com/jobandtalent/chuletest">Github</a>
 
     </header>
   </MDXProvider>
