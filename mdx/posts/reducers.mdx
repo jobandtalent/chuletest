@@ -1,0 +1,136 @@
+---
+title: 'Testing reducers'
+excerpt: 'Reducers are key to manage the business logic should happen and where new application state is formed based on external or internal response. That is why it is important to test them.'
+date: '2021-03-28'
+---
+
+Reducers are just pure functions that take the previous state and an action, and return the next state. That sounds simple, but reducers usually manage our business logic in our application. Having a good strategy to test them is super key to have a good test coverage in our application.
+
+When we talk about reducers, we are talking not only of reducers in a redux context, but any reducer. The test approach should be the same.
+
+Usually a reducer consists of initial state and a switch statement or path to handle every action. Our convention is to break down the store into different sub-stores and have separate reducers for each sub-store. Sometimes one switch or path may handle few actions, because the business logic is the same and outcome should be the same. So our test scenario would consist on triggering actions and test the outcome state.
+
+Let's see it with a real example. In one of our application, we have a form so the user can create and edit some data, nothing fancy. The state of this form is managed by a reducer, and consumed in the form by a `useReducer` hook. The reducer handles not only the field values but the validation, and the pristine status of every field:
+
+```
+import { required, moreThan, validate, areValid } from 'RequestHelp/services/validations';
+
+export const ACTIONS = {
+  CHANGE: 'change'
+};
+
+const validations = {
+  title: [required, moreThan(3)],
+  summary: [required, moreThan(3)]
+};
+
+const onChangeField = (state, action) => {
+  const data = {
+    ...state.data,
+    [action.key]: action.value
+  };
+
+  const pristine = {
+    ...state.pristine,
+    [action.key]: true
+  };
+
+  const fields = validate(data, validations);
+
+  return {
+    ...state,
+    data,
+    pristine,
+    fields,
+    valid: areValid(fields)
+  };
+};
+
+export default {
+  [ACTIONS.CHANGE]: onChangeField
+};
+```
+
+If we follow the code, we can see that an action for this reducer would have this signature:
+
+```
+{
+  type: 'change',
+  key: 'some field',
+  value: 'some value'
+}
+```
+
+Knowing that, our test approach would be to trigger actions to assert the expected outcome state:
+
+```
+import reducer, { ACTIONS } from 'RequestHelp/components/CategoryForm/reducer';
+import createReducer from 'Services/createReducer';
+
+const INITIAL_STATE = {};
+const categoryReducer = createReducer(INITIAL_STATE, reducer);
+
+describe('SublevelForm reducer', () => {
+  it('should return the initial state properly', () => {
+    expect(categoryReducer(undefined, {})).toEqual(INITIAL_STATE);
+  });
+
+  it('should handle ACTIONS.CHANGE action properly', () => {
+    expect(
+      categoryReducer(undefined, {
+        type: ACTIONS.CHANGE,
+        key: 'title',
+        value: 'wadus'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'wadus'
+        }),
+        fields: expect.objectContaining({
+          title: true
+        }),
+        pristine: expect.objectContaining({
+          title: true
+        }),
+        valid: false
+      })
+    );
+
+    expect(
+      categoryReducer(
+        {
+          data: {
+            summary: 'wadus wadus'
+          }
+        },
+        {
+          type: ACTIONS.CHANGE,
+          key: 'title',
+          value: 'wadus'
+        }
+      )
+    ).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          summary: 'wadus wadus',
+          title: 'wadus'
+        }),
+        fields: expect.objectContaining({
+          summary: true,
+          title: true
+        }),
+        valid: true
+      })
+    );
+  });
+});
+```
+
+The first step is to create our reducer. By convention, we use a functional approach to define the reducer cases, then a `createReducer` helper will create the reducer itself, to be consumed by redux or our components. In this case, we are testing three different paths:
+
+- the default path, where the reducer would return the `initialState` if the action doesn't match.
+- the initial path, where our reducer has no "accumulated" data.
+- the path where the reducer already has some calculated state.
+
+And that's it, as you can see, it's super simple to test reducers, but at the same time, it's very important because of their role in our applications.
