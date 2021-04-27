@@ -1,0 +1,77 @@
+---
+title: 'Mocks'
+excerpt: 'When we talk about mocks, we are talking about replacing dependencies with objects that tou can control and inspect easier.'
+date: '2021-03-25'
+---
+
+Mocking is a technique to isolate test subjects by replacing dependencies with objects that you can control and inspect. A dependency can be anything your test depends on, but it is typically a module that the test subject imports.
+
+In a ideal scenario, **we should mock nothing in our application**. Experience has taught us that multiple mocked methods often indicate that either a) the component tested is trying to do too much; or b) the component has high coupling and it demands a refactor.
+
+Having said that, mocks are another tool in our test arsenal, and such as, we should know how to use it. We use Jest our test framework, When we talk about mocking in Jest, we’re typically talking about replacing dependencies with the [Mock functions](https://jestjs.io/docs/mock-function-api).
+
+The Mock Function provides us a way to replace something we don't control with something we do, helping us to:
+
+- Test calls and arguments
+- Set return values
+- Change the implementation
+
+There are 3 ways to mocks modules and function in Jest:
+
+- `jest.fn`: Mock a function
+- `jest.mock`: Mock a module
+- `jest.spyOn`: Spy or mock a function
+
+## Mock a function with jest.fn
+
+The most used and basic strategy for mocking is to replace a function with `jest.fn()`. Then the mocked function will be called instead of the original method, so we can check if or when it's called and inspect the call's arguments, among other things.
+
+This is a common scenario when our components take a callback to notify events:
+
+```
+const button = screen.getByTestId('save-data-action')
+fireEvent.click(button)
+expect(callbackMocked).toHaveBeenCalledWith({...})
+```
+
+## Mocking modules with jest.mock
+
+A common approach for using `jest.mock` is when we want set all exports of a module to the mock function. Let's say we have a location service:
+
+```
+export const reload = () => window.location.reload()
+export const replace = (url) => window.location.replace(url)
+```
+
+Doing `jest.mock('Services/location')` essentially sets `location.js` to:
+
+```
+export const reload = jest.fn()
+export const replace = jest.fn()
+```
+
+But `jest.mock` allows us to pass a factory function to have more control of the returned value to accomodate it to our needs:
+
+```
+jest.mock('Services/location', () => ({
+  replace: jest.fn(() => 'wadus')
+}));
+```
+
+## Spy or mock a function with jest.spyOn
+
+Sometimes you only want to watch a method be called, but keep the original implementation. Other times you may want to mock the implementation, but restore the original later in the suite. In these cases, you can use `jest.spyOn`.
+
+Using the location service example above, we can spy when a method is called:
+
+```
+import * as location from "Services/location";
+...
+const replaceSpy = jest.spyOn(location, "replace")
+...
+expect(replaceSpy).toHaveBeenCalledWith('wadus/wadus')
+```
+
+This is useful in a number of scenarios where you want to assert that certain side-effects happen without actually replacing them. And this is specially handy when we are trying to mock `useContext` in our context based components.
+
+And that's all regarding mocking, I hope this helped to write tests painlessly. But remember, **the less we mock, the better**.
