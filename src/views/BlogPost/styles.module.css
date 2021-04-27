@@ -2,21 +2,41 @@
   margin-top: 128px;
 }
 
-.container p {
+.container {
   font-size: 16px;
   line-height: 24px;
 }
 
-.container p + p {
+.container > * + * {
   margin-top: 16px;
 }
 
-.container p code {
+.container h2 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: normal;
+  padding-top: 24px;
+}
+
+.container h3 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: normal;
+  padding-top: 24px;
+}
+
+.container code {
   display: inline-block;
   background-color: rgb(40, 42, 54);
   color: rgb(248, 248, 242);
   border-radius: 4px;
   padding: 0 8px;
+}
+
+.container ul {
+  list-style: outside;
+  list-style-type: disc;
+  padding-left: 24px;
 }
 
 .header {
