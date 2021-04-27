@@ -1,0 +1,273 @@
+---
+title: 'Testing hooks'
+excerpt: 'The future of React goes through hooks, that is a fact that we cannot deny. And from this prism, we have to treat hooks as first-class citizens, as if they were components, and apply the same approach. We must be able to test hooks in isolation'
+date: '2021-03-26'
+---
+
+The future of React goes through hooks, that is a fact that we cannot deny. And from this prism, we have to treat hooks as first-class citizens, as if they were components, and apply the same approach. We must be able to test hooks in isolation, all hooks must have unit tests, unless:
+
+- Your hook is defined alongside a component and is only used there
+- Your hook is easy to test by just testing the components using it
+
+@testing-library has an [utility library](https://github.com/testing-library/react-hooks-testing-library) for this purpose. Using this library, you do not have to concern yourself with how to construct, render or interact with the react component in order to test your hook. You can just use the hook directly and assert the results.
+
+Let's suppose we have a hook to make fetch calls. This hook will handle the request status, the error and the data returned by the request:
+
+```
+import { useReducer, useCallback } from "react";
+
+export const useFetch = (request) => {
+  const STATUS = {
+    idle: "idle",
+    fetching: "fetching",
+    fetched: "fetched",
+    errored: "errored"
+  };
+
+  const initialState = {
+    data: null,
+    error: null,
+    status: STATUS.idle
+  };
+
+  const ACTIONS = Object.freeze({
+    fetch: "fetch",
+    error: "error",
+    success: "success"
+  });
+
+  const [state, dispatch] = useReducer((state, action) => {
+    switch (action.type) {
+      case ACTIONS.fetch: {
+        if (action.options.keepPreviousData) {
+          return { ...state, error: null, fetching: STATUS.fetching };
+        }
+
+        return {
+          status: STATUS.fetching,
+          data: null,
+          error: null
+        };
+      }
+
+      case ACTIONS.error: {
+        return {
+          status: STATUS.errored,
+          error: action.error,
+          data: null
+        };
+      }
+
+      case ACTIONS.success: {
+        return {
+          status: STATUS.fetched,
+          error: null,
+          data: action.data
+        };
+      }
+
+      default:
+        return state;
+    }
+  }, initialState);
+
+  const fetch = useCallback(
+    async (params = {}, options = { keepPreviousData: false }) => {
+      dispatch({ type: ACTIONS.fetch, options });
+
+      try {
+        const response = await request(params);
+        dispatch({ type: ACTIONS.success, data: response });
+      } catch (error) {
+        dispatch({ type: ACTIONS.error, error });
+      }
+    },
+    [request, ACTIONS]
+  );
+
+  return [state, fetch];
+};
+
+export default useFetch;
+```
+
+The signature of this hook will be something like:
+
+```
+const [fetchState, fetch] = useFetch(apiMethod)
+```
+
+The `fetchState` will have a status, an error and the data. And the `fetch` will be a function to make requests. Having that into account, our tests would be something like this:
+
+```
+import { renderHook, act } from "@testing-library/react-hooks";
+import { createServer, Response } from "miragejs";
+
+import useFetch from "../useFetch";
+
+let server;
+const apiClient = async () => {
+  const response = await fetch("/api/users");
+  const json = await response.json();
+  if (response.ok) {
+    return json;
+  }
+
+  return Promise.reject(json);
+};
+
+beforeEach(() => {
+  server = createServer({
+    routes() {
+      this.namespace = "api";
+
+      this.get("/users", () => {
+        return ["Wadus", "John Doe", "Jane Wallaby"];
+      });
+    }
+  });
+
+  server.logging = false
+});
+
+afterEach(() => {
+  server.shutdown();
+});
+
+it("should return initial state properly", () => {
+  const { result } = renderHook(() => useFetch(apiClient));
+
+  const [state] = result.current;
+  expect(state).toEqual({
+    status: "idle",
+    data: null,
+    error: null
+  });
+});
+
+it("should return fetching state properly", async () => {
+  const { result } = renderHook(() => useFetch(apiClient));
+  const [, request] = result.current;
+
+  // no await, because we want to check the status right away
+  // this will show a nasty warning in console
+  act(() => request())
+
+  expect(result.current[0]).toEqual({
+    status: "fetching",
+    data: null,
+    error: null
+  });
+});
+
+it("should return response state properly", async () => {
+  const { result } = renderHook(() => useFetch(apiClient));
+  const [, request] = result.current;
+
+  await act(async () => await request());
+
+  expect(result.current[0]).toEqual({
+    status: "fetched",
+    data: ["Wadus", "John Doe", "Jane Wallaby"],
+    error: null
+  });
+});
+
+it("should return error state properly", async () => {
+  server.get("/users", () => {
+    return new Response(
+      422,
+      { "Content-Type": "application/json" },
+      { error: `Unknown error from database` }
+    );
+  });
+
+  const { result } = renderHook(() => useFetch(apiClient));
+  const [, request] = result.current;
+
+  await act(async () => await request());
+
+  expect(result.current[0]).toEqual({
+    status: "errored",
+    data: null,
+    error: { error: `Unknown error from database` }
+  });
+});
+```
+
+For convenience, we uses [miragejs](https://miragejs.com/) to mock the backend API, this way we have full control of the network and the requests response. The approach should be like usual, to "instantiate" the hook and assert the expected result. In this case, the key is:
+
+```
+const { result } = renderHook(() => useFetch(apiClient));
+```
+
+`result.current` will hold the current "rendered" version of our hook, whatever it returns. In this case, `result.current` will hold our state and the fetch function. Using this, we can test different scenarios, like the `fetching`, `success` or `error` state.
+
+Let's see another example, one where our hook has a array of dependencies. Let's assume we have the known hook to avoid the effect when is mounted and there is no change in the effect dependencies, the so called `useAfterInitialEffect`:
+
+```
+import { useEffect, useRef } from "react";
+
+const useAfterInitialEffect = (effect, deps = []) => {
+	const initialRender = useRef(true);
+
+	useEffect(() => {
+    if (initialRender.current === true) {
+      initialRender.current = false
+    } else {
+      const unmountEffect = effect()
+      if (unmountEffect && typeof unmountEffect === 'function') {
+        return unmountEffect;
+      }
+    }
+	}, deps);
+};
+
+export default useAfterInitialEffect
+```
+
+Our tests would something like this code:
+
+```
+import { renderHook } from '@testing-library/react-hooks'
+import useAvoidInitialEffect from '../useAvoidInitialEffect'
+
+describe('useAvoidInitialEffect', () => {
+  const result = jest.fn()
+  const effect = jest.fn().mockReturnValue(result)
+
+  it('should call effect from second render', () => {
+    const {rerender} = renderHook(({id}) => useAvoidInitialEffect(effect, [id]), {
+      initialProps: {id: 1}
+    })
+
+    expect(effect).not.toHaveBeenCalled()
+
+    rerender({id: 2})
+
+    expect(effect).toHaveBeenCalled()
+  })
+
+  it('should call unmount function', () => {
+    const {unmount} = renderHook(({id}) => useAvoidInitialEffect(effect, [id]), {
+      initialProps: {id: 1}
+    })
+
+    unmount();
+
+    expect(result).toHaveBeenCalled()
+  })
+})
+```
+
+In this scenario, the approach is similar, but there is sutil difference. We need to include the dependencies and their initial value in the hook instantiation:
+
+```
+const {rerender, unmount} = renderHook(({id}) => useAvoidInitialEffect(effect, [id]), {
+  initialProps: {id: 1}
+})
+```
+
+As you see, `renderHook` method returns functions to test rerenders and unmount scenarios, making pretty easy to test this hook.
+
+And that's all for hooks. Happy testing.
