@@ -23,4 +23,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start adding or editing content by modifying markdown documents under `mdx/posts`.
 
-And that's all. Happy testing.
+This project is made and maintained by the amazing humans of the [Jobandtalent](https://jobandtalent.com) frontend guild. And that's all. **Happy testing**.
