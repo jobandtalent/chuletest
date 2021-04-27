@@ -1,4 +1,5 @@
-![chuletest](https://user-images.githubusercontent.com/1366843/116208346-20cdc080-a741-11eb-876e-8b0d9e44267d.png)
+![chuletest-logo](https://user-images.githubusercontent.com/1366843/116221339-d0a92b00-a74d-11eb-98c9-931b62ceea19.png)
+
 
 ## Chuletest
 
