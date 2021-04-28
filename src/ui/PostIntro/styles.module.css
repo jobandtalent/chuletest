@@ -20,6 +20,14 @@
   line-height: 24px;
 }
 
+.content a {
+  color: #1c97f5;
+}
+
+.content a:hover {
+  text-decoration: underline;
+}
+
 .draft {
   display: inline-block;
   transform: translateY(-4px);
