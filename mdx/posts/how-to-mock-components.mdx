@@ -1,0 +1,45 @@
+---
+title: "How To Mock A React Component In Jest"
+excerpt: "For testing purposes, it can be relevant to mock a React component. To do this we have different scenarios using Jest"
+date: "2021-11-16"
+---
+
+## Default export
+
+To mock a React component, the most straightforward approach is to use the jest.mock function. You mock the file that exports the component and replace it with a custom implementation. Since a component is basically a function, the mock should also return a function.
+
+```
+jest.mock("./Wadus", () => (props) => {
+  const WadusMock = "wadus-component-mock";
+  return <WadusMock {...props}/>;
+});
+```
+
+## Named export
+
+But we don't always use default export to share our components, how do you mock a React component that is the named export of a file? For that, the implementation should mock the entire export of the file, instead of only the default export.
+
+```
+jest.mock("./Wadus", () => ({
+  Wadus: (props) => {
+    const WadusMock = "wadus-component-mock";
+    return <WadusMock {...props}/>;
+  },
+}));
+```
+
+Instead of returning a function, the mock returns an object that replaces the export of the file. Inside the object, we state the property that needs to be replaced. Then, we can specify the replacement code for it, which is the same as the previous function that we used.
+
+If we are dealing with ES6 modules, we will need some additional configurations to make it work. Specifically, we will need the add the `__esModule` property to the exported object and set it to `true`:
+
+```
+jest.mock("./Wadus", () => ({
+  __esModule: true,
+  Wadus: (props) => {
+    const WadusMock = "wadus-component-mock";
+    return <WadusMock {...props}/>;
+  },
+}));
+```
+
+For testing purposes, it can be relevant to mock a certain React component, specially for third party components. In general, it's not a good practice to mock our components.

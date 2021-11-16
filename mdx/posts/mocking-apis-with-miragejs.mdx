@@ -1,8 +1,7 @@
 ---
-title: 'Mocking APIs with MirageJS'
-excerpt: 'We ignored the network for too long. Normally we mock up the request responses, adding hacks and obtuse code to solve asynchronous processes. Using [MirageJS](https://miragejs.com/) we solve this.'
-date: '2021-04-27'
-draft: true
+title: "Mocking APIs with MirageJS"
+excerpt: "We ignored the network for too long. Normally we mock up the request responses, adding hacks and obtuse code to solve asynchronous processes. Using [MirageJS](https://miragejs.com/) we solve this."
+date: "2021-04-27"
 ---
 
 Think about everything that involves making requests: loading states, error handling, cache, latency ... and a thousand other things that asynchronous requests add to user flows in our applications.
@@ -31,7 +30,7 @@ Then, we call the `createServer` function. That’s it. Mirage will start interc
 
 ## Routes
 
-We will use the `routes()` hook to set the API routes we want to mock. All we have to do is set a function in the `createServer` function: 
+We will use the `routes()` hook to set the API routes we want to mock. All we have to do is set a function in the `createServer` function:
 
 ```
 createServer({
@@ -530,9 +529,9 @@ describe('ApiClient', () => {
 });
 ```
 
-There are some interesting details here that worths to mention. 
+There are some interesting details here that worths to mention.
 
-We use `form-data-to-object` to parse the response body easily. 
+We use `form-data-to-object` to parse the response body easily.
 
 On the other hand, MirageJS is too verbose, logging too much information for every request. It's nice when you have to debug a single tests but it becomes unmanagable when running a lot of tests. For this, we would usually want to:
 
